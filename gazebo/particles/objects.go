@@ -18,7 +18,7 @@ func MakeTransformFeedbackObject() TransformFeedbackObject {
 func (tfb TransformFeedbackObject) Bind() func() {
 	gl.BindTransformFeedback(gl.TRANSFORM_FEEDBACK, uint32(tfb))
 	return func() {
-		//gl.BindTransformFeedback(gl.TRANSFORM_FEEDBACK, 0)
+		gl.BindTransformFeedback(gl.TRANSFORM_FEEDBACK, 0)
 	}
 }
 
@@ -44,7 +44,7 @@ func MakeVertexArrayObject() VertexArrayObject {
 func (vao VertexArrayObject) Bind() func() {
 	gl.BindVertexArray(uint32(vao))
 	return func() {
-		//gl.BindVertexArray(0)
+		gl.BindVertexArray(0)
 	}
 }
 
@@ -68,7 +68,6 @@ func (vbo VertexBufferObject) SetData(data unsafe.Pointer, size uint32) uint32 {
 
 	gl.BufferData(gl.ARRAY_BUFFER, int(size), data, gl.DYNAMIC_DRAW)
 
-	//gl.NamedBufferData(uint32(vbo), int(size), data, gl.DYNAMIC_DRAW)
 	checkError()
 	return size
 }
@@ -78,7 +77,7 @@ func (vbo VertexBufferObject) SetData(data unsafe.Pointer, size uint32) uint32 {
 func (vbo VertexBufferObject) Bind(target uint32) func() {
 	gl.BindBuffer(target, uint32(vbo))
 	return func() {
-		//gl.BindBuffer(target, 0)
+		gl.BindBuffer(target, 0)
 	}
 }
 
