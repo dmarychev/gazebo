@@ -24,8 +24,7 @@ func (tfb TransformFeedbackObject) Bind() func() {
 
 func (tfb TransformFeedbackObject) AttachVertexBuffer(vbo VertexBufferObject) func() {
 	unbind_tfb := tfb.Bind()
-	unbind_vbo := vbo.Bind(gl.TRANSFORM_FEEDBACK_BUFFER)
-	gl.BindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, uint32(vbo))
+	unbind_vbo := vbo.BindBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0)
 	checkError()
 	return func() {
 		unbind_vbo()
@@ -63,10 +62,10 @@ func (vbo VertexBufferObject) SetData(data unsafe.Pointer, size uint32) uint32 {
 	// TODO: consider keeping buffer if it's size is enough
 	checkError()
 
-	unbind := vbo.Bind(gl.ARRAY_BUFFER)
+	unbind := vbo.Bind(gl.SHADER_STORAGE_BUFFER)
 	defer unbind()
 
-	gl.BufferData(gl.ARRAY_BUFFER, int(size), data, gl.DYNAMIC_DRAW)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(size), data, gl.DYNAMIC_DRAW)
 
 	checkError()
 	return size
@@ -78,6 +77,13 @@ func (vbo VertexBufferObject) Bind(target uint32) func() {
 	gl.BindBuffer(target, uint32(vbo))
 	return func() {
 		gl.BindBuffer(target, 0)
+	}
+}
+
+func (vbo VertexBufferObject) BindBase(target, index uint32) func() {
+	gl.BindBufferBase(target, index, uint32(vbo))
+	return func() {
+		gl.BindBufferBase(target, index, 0)
 	}
 }
 

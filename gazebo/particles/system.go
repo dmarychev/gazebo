@@ -2,11 +2,10 @@ package particles
 
 // particle struct
 type Particle struct {
-	X, Y, Z    float32 // coordinates
-	Vx, Vy, Vz float32 // velocities
-	Size       float32 // size
-	Weight     float32 // weight
-	Time       float32 // particle's current time, seconds from spawn
+	X, Y, Z, _    float32 // coordinates
+	Vx, Vy, Vz, _ float32 // velocities
+	//	Weight     float32 // weight
+	//	Time       float32 // particle's current time, seconds from spawn
 }
 
 type System struct {

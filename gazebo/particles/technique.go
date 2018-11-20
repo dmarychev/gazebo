@@ -6,9 +6,10 @@ import "github.com/go-gl/gl/v4.6-core/gl"
 
 type FragmentShaderSource string
 type VertexShaderSource string
+type ComputeShaderSource string
 
 // compile shader from GLSL text
-func CompileShader(source interface{}) (uint32, error) {
+func compileShader(source interface{}) (uint32, error) {
 
 	var shaderType uint32
 	var shaderText string
@@ -19,11 +20,15 @@ func CompileShader(source interface{}) (uint32, error) {
 	case FragmentShaderSource:
 		shaderType = gl.FRAGMENT_SHADER
 		shaderText = string(shader)
+	case ComputeShaderSource:
+		shaderType = gl.COMPUTE_SHADER
+		shaderText = string(shader)
 	default:
 		return 0, fmt.Errorf("Shader type is not supported %T", source)
 	}
 
 	shader := gl.CreateShader(shaderType)
+
 	csource, free := gl.Strs(shaderText)
 	defer free()
 	gl.ShaderSource(shader, 1, csource, nil)
@@ -43,60 +48,102 @@ func CompileShader(source interface{}) (uint32, error) {
 	return shader, nil
 }
 
-type Technique struct {
-	program uint32
+type Technique uint32
+
+func NewRenderTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShaderSource) (*Technique, error) {
+	return newTechnique(vertexShader, fragmentShader, nil)
 }
 
-func NewTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShaderSource, varyings *[]string) (*Technique, error) {
+func NewComputeTechnique(computeShader *ComputeShaderSource) (*Technique, error) {
+	return newTechnique(nil, nil, computeShader)
+}
 
-	t := new(Technique)
-	t.program = gl.CreateProgram()
+func newTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShaderSource, computeShader *ComputeShaderSource) (*Technique, error) {
+
+	t := Technique(gl.CreateProgram())
 
 	if vertexShader != nil {
-		vshader, err := CompileShader(*vertexShader)
+		vshader, err := compileShader(*vertexShader)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to compile vertex shader: %v", err)
 		}
-		gl.AttachShader(t.program, vshader)
+		gl.AttachShader(uint32(t), vshader)
 	}
 
 	if fragmentShader != nil {
-		fshader, err := CompileShader(*fragmentShader)
+		fshader, err := compileShader(*fragmentShader)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to compile fragment shader: %v", err)
 		}
-		gl.AttachShader(t.program, fshader)
+		gl.AttachShader(uint32(t), fshader)
 	}
 
-	if varyings != nil && len(*varyings) > 0 {
-		t.attachVaryings(*varyings)
+	if computeShader != nil {
+		cshader, err := compileShader(*computeShader)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to compile compute shader: %v", err)
+		}
+		gl.AttachShader(uint32(t), cshader)
 	}
 
-	gl.LinkProgram(t.program)
+	if err := t.linkAndValidate(); err != nil {
+		panic(err)
+	}
 	checkError()
-	return t, nil
+
+	return &t, nil
 }
 
-func (t *Technique) attachVaryings(variables []string) {
+func (t *Technique) linkAndValidate() error {
+	p := uint32(*t)
 
-	fmtVars := make([]string, len(variables))
-	for i, v := range variables {
-		fmtVars[i] = fmt.Sprintf("%v\x00", v)
+	var status int32
+	var logLength int32
+
+	gl.LinkProgram(p)
+	checkError()
+	gl.GetProgramiv(p, gl.LINK_STATUS, &status)
+	gl.GetProgramiv(p, gl.INFO_LOG_LENGTH, &logLength)
+	if logLength > 0 {
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetProgramInfoLog(p, logLength, nil, gl.Str(log))
+		fmt.Printf("Link log:\n%v\n", log)
+	}
+	if status == gl.FALSE {
+		return fmt.Errorf("failed to link program: %v", status)
 	}
 
-	fvaryings, free := gl.Strs(fmtVars...)
-	defer free()
-
-	gl.TransformFeedbackVaryings(t.program, int32(len(variables)), fvaryings, gl.INTERLEAVED_ATTRIBS)
+	gl.ValidateProgram(p)
 	checkError()
+	gl.GetProgramiv(p, gl.VALIDATE_STATUS, &status)
+	gl.GetProgramiv(p, gl.INFO_LOG_LENGTH, &logLength)
+	if logLength > 0 {
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetProgramInfoLog(p, logLength, nil, gl.Str(log))
+		fmt.Printf("Validate log:\n%v\n", log)
+	}
+	if status == gl.FALSE {
+		return fmt.Errorf("failed to validate program: %v", status)
+	}
+
+	return nil
 }
 
-func (t *Technique) SetUniform(name string, value interface{}) {
-	// TODO: implement me
+func (t *Technique) GetUniformFloat32(name string) (value float32) {
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(name))
+	gl.GetUniformfv(uint32(*t), uLocation, &value)
+	return
+}
+
+func (t *Technique) SetUniformFloat32(name string, value float32) {
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(name))
+	disable := t.Enable()
+	defer disable()
+	gl.Uniform1f(uLocation, value)
 }
 
 func (t *Technique) Enable() func() {
-	gl.UseProgram(t.program)
+	gl.UseProgram(uint32(*t))
 	checkError()
 	return func() {
 		gl.UseProgram(0)
