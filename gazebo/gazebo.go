@@ -82,6 +82,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	for _, ui := range tinfo.UniformVariables {
+		fmt.Printf("%v\n", ui)
+	}
 	for _, ssbi := range tinfo.ShaderStorageBuffers {
 		fmt.Printf("%v\n", ssbi)
 		for _, variable := range ssbi.Variables {

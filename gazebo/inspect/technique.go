@@ -4,8 +4,58 @@ import "fmt"
 import "github.com/go-gl/gl/v4.6-core/gl"
 import "github.com/dmarychev/gazebo/core"
 
+type iUniformVariable struct {
+	Name     string
+	Location uint32
+}
+
+func (uvi iUniformVariable) String() string {
+	return fmt.Sprintf("%v(location=%v) uniform variable", uvi.Name, uvi.Location)
+}
+
+func uniformVariables(t *core.Technique) ([]iUniformVariable, error) {
+
+	var numUniforms int32
+	gl.GetProgramInterfaceiv(uint32(*t), gl.UNIFORM, gl.ACTIVE_RESOURCES, &numUniforms)
+	core.CheckError()
+
+	uniformSet := make([]iUniformVariable, 0, numUniforms)
+	if cap(uniformSet) == 0 {
+		return uniformSet, nil
+	}
+
+	for uniformIndex := uint32(0); uniformIndex < uint32(numUniforms); uniformIndex++ {
+
+		// retrieve name length
+		var nameLen int32
+		nameLenProp := uint32(gl.NAME_LENGTH)
+		gl.GetProgramResourceiv(uint32(*t), gl.UNIFORM, uint32(uniformIndex), 1, &nameLenProp, 1, nil, &nameLen)
+		core.CheckError()
+
+		// retrieve name
+		name := make([]uint8, nameLen)
+		gl.GetProgramResourceName(uint32(*t), gl.UNIFORM, uint32(uniformIndex), int32(len(name)), &nameLen, &name[0])
+		name = name[:nameLen]
+		core.CheckError()
+
+		// location
+		var location int32
+		locationProp := uint32(gl.LOCATION)
+		gl.GetProgramResourceiv(uint32(*t), gl.UNIFORM, uint32(uniformIndex), 1, &locationProp, 1, nil, &location)
+		core.CheckError()
+
+		uniformSet = append(uniformSet, iUniformVariable{
+			Name:     string(name),
+			Location: uint32(location),
+		})
+	}
+
+	return uniformSet, nil
+}
+
 type iBufferVariable struct {
 	Name   string
+	Index  uint32
 	Offset uint32
 }
 
@@ -34,6 +84,7 @@ func bufferVariable(t *core.Technique, varIndex uint32) (*iBufferVariable, error
 	core.CheckError()
 
 	return &iBufferVariable{
+		Index:  varIndex,
 		Name:   string(name),
 		Offset: uint32(offset),
 	}, nil
@@ -108,6 +159,7 @@ func shaderStorageBuffers(t *core.Technique) ([]iShaderStorageBuffer, error) {
 }
 
 type iTechnique struct {
+	UniformVariables     []iUniformVariable
 	ShaderStorageBuffers []iShaderStorageBuffer
 }
 
@@ -117,7 +169,13 @@ func InspectTechnique(t *core.Technique) (*iTechnique, error) {
 		return nil, err
 	}
 
+	uniformInfoSet, err := uniformVariables(t)
+	if err != nil {
+		return nil, err
+	}
+
 	return &iTechnique{
+		UniformVariables:     uniformInfoSet,
 		ShaderStorageBuffers: ssboInfoSet,
 	}, nil
 }
