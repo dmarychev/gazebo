@@ -1,5 +1,7 @@
 package particles
 
+import "github.com/dmarychev/gazebo/core"
+
 // particle struct
 type Particle struct {
 	X, Y, Z, _    float32 // coordinates
@@ -14,7 +16,7 @@ type System struct {
 	modellingStep float32      // increase for particle's time
 }
 
-func NewSystem(particles []Particle, modellingStep float32, updateTechnique, renderTechnique *Technique) *System {
+func NewSystem(particles []Particle, modellingStep float32, updateTechnique, renderTechnique *core.Technique) *System {
 
 	s := System{
 		modellingStep: modellingStep,
@@ -37,13 +39,13 @@ func (s *System) Size() uint32 {
 // shows current state on screen
 func (s *System) Render() {
 	s.renderState.Render()
-	checkError()
+	core.CheckError()
 }
 
 // updates particle system's state
 func (s *System) Update() {
 	s.renderState.Update()
-	checkError()
+	core.CheckError()
 }
 
 // synchronizes `s.particles` with current state in GPU memory

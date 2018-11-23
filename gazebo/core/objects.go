@@ -1,4 +1,4 @@
-package particles
+package core
 
 import "unsafe"
 import "github.com/go-gl/gl/v4.6-core/gl"
@@ -25,7 +25,7 @@ func (tfb TransformFeedbackObject) Bind() func() {
 func (tfb TransformFeedbackObject) AttachVertexBuffer(vbo VertexBufferObject) func() {
 	unbind_tfb := tfb.Bind()
 	unbind_vbo := vbo.BindBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0)
-	checkError()
+	CheckError()
 	return func() {
 		unbind_vbo()
 		unbind_tfb()
@@ -60,14 +60,14 @@ func MakeVertexBufferObject(sizeBytes int, data unsafe.Pointer) VertexBufferObje
 
 func (vbo VertexBufferObject) SetData(data unsafe.Pointer, size uint32) uint32 {
 	// TODO: consider keeping buffer if it's size is enough
-	checkError()
+	CheckError()
 
 	unbind := vbo.Bind(gl.SHADER_STORAGE_BUFFER)
 	defer unbind()
 
 	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(size), data, gl.DYNAMIC_DRAW)
 
-	checkError()
+	CheckError()
 	return size
 }
 
@@ -92,6 +92,6 @@ func (vbo VertexBufferObject) Size() (sizeBytes int32) {
 	defer unbind()
 
 	gl.GetBufferParameteriv(gl.ARRAY_BUFFER, gl.BUFFER_SIZE, &sizeBytes)
-	checkError()
+	CheckError()
 	return
 }

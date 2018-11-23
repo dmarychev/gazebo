@@ -1,17 +1,17 @@
 package main
 
+import "log"
+import "time"
+import "math"
+import "math/rand"
+import "fmt"
 import "io/ioutil"
 import "runtime"
 import "github.com/go-gl/glfw/v3.2/glfw"
 import "github.com/go-gl/gl/v4.6-core/gl"
 import "github.com/dmarychev/gazebo/particles"
-
-import "log"
-import "time"
-
-import "math"
-
-import "math/rand"
+import "github.com/dmarychev/gazebo/core"
+import "github.com/dmarychev/gazebo/inspect"
 
 func initOpenGL() {
 	if err := gl.Init(); err != nil {
@@ -64,21 +64,32 @@ func main() {
 		panic(err)
 	}
 
-	vertexShaderSource := particles.VertexShaderSource(vertexShader)
-	fragmentShaderSource := particles.FragmentShaderSource(fragmentShader)
-	computeShaderSource := particles.ComputeShaderSource(computeShader)
+	vertexShaderSource := core.VertexShaderSource(vertexShader)
+	fragmentShaderSource := core.FragmentShaderSource(fragmentShader)
+	computeShaderSource := core.ComputeShaderSource(computeShader)
 
-	updateTechnique, err := particles.NewComputeTechnique(&computeShaderSource)
+	updateTechnique, err := core.NewComputeTechnique(&computeShaderSource)
 	if err != nil {
 		panic(err)
 	}
 
-	renderTechnique, err := particles.NewRenderTechnique(&vertexShaderSource, &fragmentShaderSource)
+	renderTechnique, err := core.NewRenderTechnique(&vertexShaderSource, &fragmentShaderSource)
 	if err != nil {
 		panic(err)
 	}
 
-	particlesSet := make([]particles.Particle, 0, 10000)
+	tinfo, err := inspect.InspectTechnique(updateTechnique)
+	if err != nil {
+		panic(err)
+	}
+	for _, ssbi := range tinfo.ShaderStorageBuffers {
+		fmt.Printf("%v\n", ssbi)
+		for _, variable := range ssbi.Variables {
+			fmt.Printf("%v\n", variable)
+		}
+	}
+
+	particlesSet := make([]particles.Particle, 0, 100000)
 
 	for i := 0; i < cap(particlesSet); i++ {
 		rho := 0.05 + 0.2*rand.Float32()

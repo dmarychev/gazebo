@@ -1,6 +1,7 @@
 package particles
 
 import "github.com/go-gl/gl/v4.6-core/gl"
+import "github.com/dmarychev/gazebo/core"
 import "unsafe"
 
 //import "log"
@@ -18,16 +19,16 @@ func AttachVertexAttributes() func() {
 }
 
 type RenderState struct {
-	updateTechnique  *Technique            // a technique used to update system
-	renderTechnique  *Technique            // a technique used to render system
-	vao              VertexArrayObject     // array buffer associated with the state
-	vbo              [2]VertexBufferObject // one VBO contains particles to be drawn now, another is a receiver for transformed particles. VBOs are swapped after render.
-	indexSource      uint32                // VBO with this index is being read
-	indexDestination uint32                // VBO with this index is being written
-	countParticles   uint32                // number of particles in process
+	updateTechnique  *core.Technique            // a technique used to update system
+	renderTechnique  *core.Technique            // a technique used to render system
+	vao              core.VertexArrayObject     // array buffer associated with the state
+	vbo              [2]core.VertexBufferObject // one VBO contains particles to be drawn now, another is a receiver for transformed particles. VBOs are swapped after render.
+	indexSource      uint32                     // VBO with this index is being read
+	indexDestination uint32                     // VBO with this index is being written
+	countParticles   uint32                     // number of particles in process
 }
 
-func NewRenderState(update *Technique, render *Technique) *RenderState {
+func NewRenderState(update *core.Technique, render *core.Technique) *RenderState {
 	rs := RenderState{
 		updateTechnique:  update,
 		renderTechnique:  render,
@@ -37,17 +38,17 @@ func NewRenderState(update *Technique, render *Technique) *RenderState {
 
 	// initialize buffer; use single buffer, pointing to attributes with offset and stride
 	for index := range rs.vbo {
-		rs.vbo[index] = MakeVertexBufferObject(0, nil)
+		rs.vbo[index] = core.MakeVertexBufferObject(0, nil)
 	}
 
 	return &rs
 }
 
-func (rs *RenderState) SourceVbo() VertexBufferObject {
+func (rs *RenderState) SourceVbo() core.VertexBufferObject {
 	return rs.vbo[rs.indexSource]
 }
 
-func (rs *RenderState) DestinationVbo() VertexBufferObject {
+func (rs *RenderState) DestinationVbo() core.VertexBufferObject {
 	return rs.vbo[rs.indexDestination]
 }
 
@@ -76,10 +77,10 @@ func (rs *RenderState) Update() {
 	defer unbind()
 
 	gl.DispatchCompute(rs.countParticles, 1, 1)
-	checkError()
+	core.CheckError()
 
 	gl.MemoryBarrier(gl.SHADER_STORAGE_BARRIER_BIT)
-	checkError()
+	core.CheckError()
 }
 
 func (rs *RenderState) Render() {

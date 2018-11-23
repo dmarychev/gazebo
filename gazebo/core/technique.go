@@ -1,4 +1,4 @@
-package particles
+package core
 
 import "fmt"
 import "strings"
@@ -87,9 +87,9 @@ func newTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShad
 	}
 
 	if err := t.linkAndValidate(); err != nil {
-		panic(err)
+		return nil, err
 	}
-	checkError()
+	CheckError()
 
 	return &t, nil
 }
@@ -101,7 +101,7 @@ func (t *Technique) linkAndValidate() error {
 	var logLength int32
 
 	gl.LinkProgram(p)
-	checkError()
+	CheckError()
 	gl.GetProgramiv(p, gl.LINK_STATUS, &status)
 	gl.GetProgramiv(p, gl.INFO_LOG_LENGTH, &logLength)
 	if logLength > 0 {
@@ -114,7 +114,7 @@ func (t *Technique) linkAndValidate() error {
 	}
 
 	gl.ValidateProgram(p)
-	checkError()
+	CheckError()
 	gl.GetProgramiv(p, gl.VALIDATE_STATUS, &status)
 	gl.GetProgramiv(p, gl.INFO_LOG_LENGTH, &logLength)
 	if logLength > 0 {
@@ -144,9 +144,9 @@ func (t *Technique) SetUniformFloat32(name string, value float32) {
 
 func (t *Technique) Enable() func() {
 	gl.UseProgram(uint32(*t))
-	checkError()
+	CheckError()
 	return func() {
 		gl.UseProgram(0)
-		checkError()
+		CheckError()
 	}
 }
