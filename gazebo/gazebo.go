@@ -4,14 +4,11 @@ import "log"
 import "time"
 import "math"
 import "math/rand"
-import "fmt"
-import "io/ioutil"
 import "runtime"
 import "github.com/go-gl/glfw/v3.2/glfw"
 import "github.com/go-gl/gl/v4.6-core/gl"
 import "github.com/dmarychev/gazebo/particles"
 import "github.com/dmarychev/gazebo/core"
-import "github.com/dmarychev/gazebo/inspect"
 
 func initOpenGL() {
 	if err := gl.Init(); err != nil {
@@ -49,61 +46,39 @@ func main() {
 
 	initOpenGL()
 
-	vertexShader, err := ioutil.ReadFile("vfx/test.vs")
-	if err != nil {
-		panic(err)
-	}
-
-	fragmentShader, err := ioutil.ReadFile("vfx/test.fs")
-	if err != nil {
-		panic(err)
-	}
-
-	computeShader, err := ioutil.ReadFile("vfx/test.cs")
-	if err != nil {
-		panic(err)
-	}
-
-	vertexShaderSource := core.VertexShaderSource(vertexShader)
-	fragmentShaderSource := core.FragmentShaderSource(fragmentShader)
-	computeShaderSource := core.ComputeShaderSource(computeShader)
-
-	updateTechnique, err := core.NewComputeTechnique(&computeShaderSource)
-	if err != nil {
-		panic(err)
-	}
-
-	renderTechnique, err := core.NewRenderTechnique(&vertexShaderSource, &fragmentShaderSource)
-	if err != nil {
-		panic(err)
-	}
-
-	tinfo, err := inspect.InspectTechnique(updateTechnique)
-	if err != nil {
-		panic(err)
-	}
-	for _, ui := range tinfo.UniformVariables {
-		fmt.Printf("%v\n", ui)
-	}
-	for _, ssbi := range tinfo.ShaderStorageBuffers {
-		fmt.Printf("%v\n", ssbi)
-		for _, variable := range ssbi.Variables {
-			fmt.Printf("%v\n", variable)
-		}
-	}
-
-	particlesSet := make([]particles.Particle, 0, 100000)
+	particlesSet := make([]particles.Particle, 0, 10000)
 
 	for i := 0; i < cap(particlesSet); i++ {
 		rho := 0.05 + 0.2*rand.Float32()
 		phi := float64(math.Pi * (0.25 + 0.5*rand.Float32()))
 		particlesSet = append(particlesSet, particles.Particle{
-			Vx: rho * float32(math.Cos(phi)),
-			Vy: rho * float32(math.Sin(phi)),
+			V: core.Vec2{X: rho * float32(math.Cos(phi)), Y: rho * float32(math.Sin(phi))},
+			M: 1.0,
 		})
 	}
 
-	ps := particles.NewSystem(particlesSet, 0.5, updateTechnique, renderTechnique)
+	rt, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
+	if err != nil {
+		panic(err)
+	}
+
+	ps := particles.NewSystem(particlesSet, 0.5, rt)
+
+	if err = ps.AddUpdateTechniqueFromFile("sph/accumulate_forces.cs"); err != nil {
+		panic(err)
+	}
+
+	leapfrog, err := particles.NewComputeTechniqueFromFile("sph/leapfrog_integration.cs")
+	if err != nil {
+		panic(err)
+	}
+	//	leapfrog.SetUniformFloat32("dt", 0.001)
+	log.Printf("dt=", leapfrog.GetUniformFloat32("dt"))
+	ps.AddUpdateTechnique(leapfrog)
+
+	if err = ps.AddUpdateTechniqueFromFile("sph/reflect_boundaries.cs"); err != nil {
+		panic(err)
+	}
 
 	t0 := time.Now()
 	fps := 0
@@ -115,7 +90,7 @@ func main() {
 		window.SwapBuffers()
 		glfw.PollEvents()
 		if t1 := time.Now(); t1.Sub(t0) >= 1000000000 {
-			log.Printf("%v FPS\r", fps)
+			log.Printf("%v FPS", fps)
 			fps, t0 = 0, t1
 		}
 	}

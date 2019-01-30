@@ -130,13 +130,13 @@ func (t *Technique) linkAndValidate() error {
 }
 
 func (t *Technique) GetUniformFloat32(name string) (value float32) {
-	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(name))
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(fmt.Sprintf("%v\x00", name)))
 	gl.GetUniformfv(uint32(*t), uLocation, &value)
 	return
 }
 
 func (t *Technique) SetUniformFloat32(name string, value float32) {
-	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(name))
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(fmt.Sprintf("%v\x00", name)))
 	disable := t.Enable()
 	defer disable()
 	gl.Uniform1f(uLocation, value)
