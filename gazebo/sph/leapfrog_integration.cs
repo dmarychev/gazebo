@@ -11,6 +11,7 @@ struct Particle {
     vec2 f_press;
     vec2 f_grav;
     vec2 f_total;
+    vec2 prev_f_total;
     float p; // pressure
     float d; // density
     float m; // mass
@@ -28,12 +29,10 @@ void main()
     uint gid = gl_GlobalInvocationID.x;
     Particle p = current_particles[gid];
 
-    vec2 a = p.f_total / p.m;
-//    vec2 v_half = p.v + a * 0.5 * dt;
-//    p.r += v_half * dt;
-//    p.v = v_half + a * 0.5 * dt;
-    p.r = p.r + p.v * dt + a * dt * dt / 2.0;
-    p.v = p.v + a * dt;
+    vec2 v_half = p.v + 0.5 * dt * p.prev_f_total / p.m;
+    p.r = p.r + v_half * dt;
+    p.v = v_half + 0.5 * dt * p.f_total / p.m;
+    p.prev_f_total = vec2(0,0) + p.f_total; // save from previous step
 
     current_particles[gid] = p;
 }

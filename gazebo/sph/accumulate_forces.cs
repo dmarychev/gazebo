@@ -11,6 +11,7 @@ struct Particle {
     vec2 f_press;
     vec2 f_grav;
     vec2 f_total;
+    vec2 prev_f_total;
     float p; // pressure
     float d; // density
     float m; // mass
@@ -29,7 +30,6 @@ void main()
     Particle p = current_particles[gid];
 
     p.f_grav = vec2(0, -p.m * g);
-
     p.f_total = p.f_vis + p.f_press + p.f_grav;
 
     current_particles[gid] = p;

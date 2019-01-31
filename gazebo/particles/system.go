@@ -13,6 +13,7 @@ type Particle struct {
 	Fpress core.Vec2 // F(pressure)
 	Fgrav  core.Vec2 // F(gravity)
 	F      core.Vec2 // F(total)
+	prevF  core.Vec2 // F(total) on previous step
 	P      float32   // pressure
 	D      float32   // density
 	M      float32   // mass

@@ -64,6 +64,8 @@ func main() {
 
 	ps := particles.NewSystem(particlesSet, 0.5, rt)
 
+	// adding computation steps
+
 	if err = ps.AddUpdateTechniqueFromFile("sph/accumulate_forces.cs"); err != nil {
 		panic(err)
 	}
@@ -79,6 +81,8 @@ func main() {
 	if err = ps.AddUpdateTechniqueFromFile("sph/reflect_boundaries.cs"); err != nil {
 		panic(err)
 	}
+
+	// calculations
 
 	t0 := time.Now()
 	fps := 0

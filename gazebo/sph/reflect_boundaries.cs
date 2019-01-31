@@ -11,6 +11,7 @@ struct Particle {
     vec2 f_press;
     vec2 f_grav;
     vec2 f_total;
+    vec2 prev_f_total;
     float p; // pressure
     float d; // density
     float m; // mass
