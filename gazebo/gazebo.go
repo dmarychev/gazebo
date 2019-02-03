@@ -2,7 +2,8 @@ package main
 
 import "log"
 import "time"
-import "math"
+
+//import "math"
 import "math/rand"
 import "runtime"
 import "github.com/go-gl/glfw/v3.2/glfw"
@@ -46,16 +47,30 @@ func main() {
 
 	initOpenGL()
 
-	particlesSet := make([]particles.Particle, 0, 10000)
+	particlesSet := make([]particles.Particle, 0, 1000)
 
-	for i := 0; i < cap(particlesSet); i++ {
-		rho := 0.05 + 0.2*rand.Float32()
-		phi := float64(math.Pi * (0.25 + 0.5*rand.Float32()))
-		particlesSet = append(particlesSet, particles.Particle{
-			V: core.Vec2{X: rho * float32(math.Cos(phi)), Y: rho * float32(math.Sin(phi))},
-			M: 1.0,
-		})
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 50; j++ {
+			particlesSet = append(particlesSet, particles.Particle{
+				R: core.Vec2{X: 0.01 * float32(i), Y: -0.3 + 0.01*float32(j)},
+				M: 0.01,
+			})
+		}
 	}
+
+	for i := range particlesSet {
+		particlesSet[i].R.X += -0.005 + 0.01*rand.Float32()
+		//particlesSet[i].R.Y += -0.005 + 0.01*rand.Float32()
+	}
+
+	/*	for i := 0; i < cap(particlesSet); i++ {
+		rho := 0.5 + 0.5*rand.Float32()
+		phi := float32(math.Pi * (0.25 + 0.5*rand.Float32()))
+		particlesSet = append(particlesSet, particles.Particle{
+			R: core.Vec2{X: rho * float32(math.Cos(phi)), Y: rho * float32(math.Sin(phi))},
+			M: 0.1,
+		})
+	}*/
 
 	rt, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
 	if err != nil {
@@ -66,15 +81,18 @@ func main() {
 
 	// adding computation steps
 
-	if err = ps.AddUpdateTechniqueFromFile("sph/accumulate_forces.cs"); err != nil {
+	if err = ps.AddUpdateTechniqueFromFile("sph/density_and_pressure.cs"); err != nil {
 		panic(err)
 	}
 
+	if err = ps.AddUpdateTechniqueFromFile("sph/accumulate_forces.cs"); err != nil {
+		panic(err)
+	}
 	leapfrog, err := particles.NewComputeTechniqueFromFile("sph/leapfrog_integration.cs")
 	if err != nil {
 		panic(err)
 	}
-	//	leapfrog.SetUniformFloat32("dt", 0.001)
+	leapfrog.SetUniformFloat32("dt", 0.01)
 	log.Printf("dt=", leapfrog.GetUniformFloat32("dt"))
 	ps.AddUpdateTechnique(leapfrog)
 
@@ -97,5 +115,6 @@ func main() {
 			log.Printf("%v FPS", fps)
 			fps, t0 = 0, t1
 		}
+		core.CheckError()
 	}
 }

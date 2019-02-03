@@ -7,17 +7,14 @@ import "github.com/dmarychev/gazebo/inspect"
 
 // particle struct
 type Particle struct {
-	R      core.Vec2 // coordinates
-	V      core.Vec2 // velocity
-	Fvis   core.Vec2 // F(viscosity)
-	Fpress core.Vec2 // F(pressure)
-	Fgrav  core.Vec2 // F(gravity)
-	F      core.Vec2 // F(total)
-	prevF  core.Vec2 // F(total) on previous step
-	P      float32   // pressure
-	D      float32   // density
-	M      float32   // mass
-	t      float32   // current time
+	R     core.Vec2 // coordinates
+	V     core.Vec2 // velocity
+	F     core.Vec2 // F(total)
+	prevF core.Vec2 // F(total) on previous step
+	P     float32   // pressure
+	D     float32   // density
+	M     float32   // mass
+	_     float32
 }
 
 type System struct {

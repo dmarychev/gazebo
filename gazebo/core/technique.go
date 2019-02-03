@@ -142,6 +142,19 @@ func (t *Technique) SetUniformFloat32(name string, value float32) {
 	gl.Uniform1f(uLocation, value)
 }
 
+func (t *Technique) GetUniformFloat64(name string) (value float64) {
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(fmt.Sprintf("%v\x00", name)))
+	gl.GetUniformdv(uint32(*t), uLocation, &value)
+	return
+}
+
+func (t *Technique) SetUniformFloat64(name string, value float64) {
+	uLocation := gl.GetUniformLocation(uint32(*t), gl.Str(fmt.Sprintf("%v\x00", name)))
+	disable := t.Enable()
+	defer disable()
+	gl.Uniform1d(uLocation, value)
+}
+
 func (t *Technique) Enable() func() {
 	gl.UseProgram(uint32(*t))
 	CheckError()
