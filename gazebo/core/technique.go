@@ -27,6 +27,7 @@ func compileShader(source interface{}) (uint32, error) {
 		return 0, fmt.Errorf("Shader type is not supported %T", source)
 	}
 
+	shaderText = fmt.Sprintf("%s\x00", shaderText)
 	shader := gl.CreateShader(shaderType)
 
 	csource, free := gl.Strs(shaderText)
@@ -68,6 +69,7 @@ func newTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShad
 			return nil, fmt.Errorf("Failed to compile vertex shader: %v", err)
 		}
 		gl.AttachShader(uint32(t), vshader)
+		gl.DeleteShader(vshader)
 	}
 
 	if fragmentShader != nil {
@@ -76,6 +78,7 @@ func newTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShad
 			return nil, fmt.Errorf("Failed to compile fragment shader: %v", err)
 		}
 		gl.AttachShader(uint32(t), fshader)
+		gl.DeleteShader(fshader)
 	}
 
 	if computeShader != nil {
@@ -84,6 +87,7 @@ func newTechnique(vertexShader *VertexShaderSource, fragmentShader *FragmentShad
 			return nil, fmt.Errorf("Failed to compile compute shader: %v", err)
 		}
 		gl.AttachShader(uint32(t), cshader)
+		gl.DeleteShader(cshader)
 	}
 
 	if err := t.linkAndValidate(); err != nil {
