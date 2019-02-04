@@ -1,6 +1,6 @@
 #version 460
 
-#pragma optimize(off)
+//#pragma optimize(off)
 
 out vec4 frag_color;
 

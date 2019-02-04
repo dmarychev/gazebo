@@ -26,12 +26,12 @@ func initGlfw() *glfw.Window {
 		panic(err)
 	}
 
-	window, err := glfw.CreateWindow(800, 600, "Test", nil, nil)
+	window, err := glfw.CreateWindow(1920, 1080, "Test", nil, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	window.SetAspectRatio(4, 3)
+	//window.SetAspectRatio(4, 3)
 	window.MakeContextCurrent()
 
 	return window
@@ -47,20 +47,21 @@ func main() {
 
 	initOpenGL()
 
-	particlesSet := make([]particles.Particle, 0, 1000)
+	particlesSet := make([]particles.Particle, 0, 4096)
 
-	for i := 0; i < 20; i++ {
-		for j := 0; j < 50; j++ {
+	for i := 0; i < 32; i++ {
+		for j := 0; j < 256; j++ {
 			particlesSet = append(particlesSet, particles.Particle{
-				R: core.Vec2{X: 0.01 * float32(i), Y: -0.3 + 0.01*float32(j)},
+				R: core.Vec2{X: 0.01 * float32(i), Y: 0.01 * float32(j)},
+				//V: core.Vec2{Y: -2},
 				M: 0.01,
 			})
 		}
 	}
 
 	for i := range particlesSet {
-		particlesSet[i].R.X += -0.005 + 0.01*rand.Float32()
-		//particlesSet[i].R.Y += -0.005 + 0.01*rand.Float32()
+		particlesSet[i].R.X += -0.0005 + 0.001*rand.Float32()
+		particlesSet[i].R.Y += -0.0005 + 0.001*rand.Float32()
 	}
 
 	/*	for i := 0; i < cap(particlesSet); i++ {
@@ -72,12 +73,25 @@ func main() {
 		})
 	}*/
 
-	rt, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
+	renderThis, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
 	if err != nil {
 		panic(err)
 	}
 
-	ps := particles.NewSystem(particlesSet, 0.5, rt)
+	indexClear, err := particles.NewComputeTechniqueFromFile("sph/index_clear.cs")
+	if err != nil {
+		panic(err)
+	}
+
+	indexMaxNeighbors := uint32(40)
+
+	indexUpdate, err := particles.NewComputeTechniqueFromFile("sph/index_update.cs")
+	if err != nil {
+		panic(err)
+	}
+	indexUpdate.SetUniformUint("index_max_neighbors", indexMaxNeighbors)
+
+	ps := particles.NewSystem(particlesSet, 0.5, renderThis, indexUpdate, indexClear, indexMaxNeighbors)
 
 	// adding computation steps
 

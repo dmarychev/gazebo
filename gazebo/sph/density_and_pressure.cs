@@ -1,8 +1,8 @@
 // calculate density and pressure
 #version 460
-//#pragma optimize(off)
+#pragma optimize(off)
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle {
     vec2 r;
@@ -12,35 +12,44 @@ struct Particle {
     float p; // pressure
     float d; // density
     float m; // mass
+    float _;
 };
 
 const float PI = 3.1415926535897932384626433832795;
 
-uniform float h = 0.05;
-uniform float k = 0.1;
+uniform float h = 0.01;
+uniform float k = 0.01;
 
 layout(std430, binding=0) buffer Particles {
     Particle current_particles[];
 };
 
+layout(std430, binding=1) buffer Index {
+    uint index[];
+};
+
+uniform uint index_max_neighbors = 40;
+
 float W(float r, float h) {
-    return r < h ? (315.0/(64.0 * PI * pow(h, 9))) * pow(pow(h, 2) - pow(r, 2), 3) : 0.0;
+    return (315.0/(64.0 * PI * pow(h, 9))) * pow(pow(h, 2) - pow(r, 2), 3);
 }
 
 void main()
 {
-    uint gid = gl_GlobalInvocationID.x;
-    Particle p = current_particles[gid];
+    uint p_i = gl_GlobalInvocationID.x;
+    Particle p = current_particles[p_i];
 
-    uint num_particles = (gl_NumWorkGroups * gl_WorkGroupSize).x;
+    uint index_base = p_i * index_max_neighbors;
 
-    p.d = .0f;
-    for (uint p_i = 0; p_i < num_particles; ++p_i) {
-        Particle o = current_particles[p_i];
-        p.d += o.m * W(length(p.r - o.r), h);
+    p.d = 0.0;
+    for (uint i = 0; i < index_max_neighbors; i++) {
+        uint neighbor_idx = index[index_base + i];
+        if (neighbor_idx != 0xdeadbeef) {
+            Particle o = current_particles[neighbor_idx];
+            p.d += o.m * W(length(p.r - o.r), h);
+        }
     }
 
     p.p = k * p.d;
-
-    current_particles[gid] = p;
+    current_particles[p_i] = p;
 }

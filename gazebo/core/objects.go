@@ -71,7 +71,16 @@ func (vbo VertexBufferObject) SetData(data unsafe.Pointer, size uint32) uint32 {
 	return size
 }
 
-// TODO: func (vbo VertexBufferObject) GetData(...)
+func (vbo VertexBufferObject) GetData(data unsafe.Pointer, size uint32) {
+	CheckError()
+
+	unbind := vbo.Bind(gl.SHADER_STORAGE_BUFFER)
+	defer unbind()
+
+	gl.GetBufferSubData(gl.SHADER_STORAGE_BUFFER, 0, int(size), data)
+
+	CheckError()
+}
 
 func (vbo VertexBufferObject) Bind(target uint32) func() {
 	gl.BindBuffer(target, uint32(vbo))

@@ -2,7 +2,7 @@
 #version 460
 //#pragma optimize(off)
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle {
     vec2 r;
@@ -12,6 +12,7 @@ struct Particle {
     float p; // pressure
     float d; // density
     float m; // mass
+    float _;
 };
 
 uniform float dt = 0.01;

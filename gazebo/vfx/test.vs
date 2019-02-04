@@ -1,6 +1,6 @@
 #version 460
 
-#pragma optimize(off)
+//#pragma optimize(off)
 
 in vec2 p_location;
 

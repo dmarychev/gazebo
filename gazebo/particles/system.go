@@ -23,12 +23,12 @@ type System struct {
 	modellingStep float32      // increase for particle's time
 }
 
-func NewSystem(particles []Particle, modellingStep float32, renderTechnique *core.Technique) *System {
+func NewSystem(particles []Particle, modellingStep float32, renderTechnique, indexUpdate, indexClear *core.Technique, indexMaxNeighbors uint32) *System {
 
 	s := System{
 		modellingStep: modellingStep,
 		particles:     make([]Particle, len(particles)),
-		renderState:   NewRenderState(renderTechnique),
+		renderState:   NewRenderState(renderTechnique, indexUpdate, indexClear, indexMaxNeighbors),
 	}
 
 	// work with copy of particles for safety

@@ -2,7 +2,7 @@
 #version 460
 #pragma optimize(off)
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle {
     vec2 r;
@@ -12,40 +12,37 @@ struct Particle {
     float p; // pressure
     float d; // density
     float m; // mass
+    float _;
 };
 
-uniform float damping_coeff = 0.9;
+uniform float damping_coeff = -0.5;
 
 layout(std430, binding=0) buffer Particles {
     Particle current_particles[];
 };
 
 const float half_h_size = 0.8;
-const float half_w_size = 0.5;
+const float half_w_size = 0.8;
+const float eps = 0.001;
 
 void main()
 {
     uint gid = gl_GlobalInvocationID.x;
     Particle p = current_particles[gid];
 
-    if (p.r.y >= half_h_size) {
-        vec2 n = vec2(0, -1.0);
-        p.v = damping_coeff * reflect(p.v, n);
-    }
-
+    /*if (p.r.y >= half_h_size) {
+        p.v *= damping_coeff;
+        p.r.y = half_h_size - eps;
+    } else */
     if (p.r.y <= -half_h_size) {
-        vec2 n = vec2(0, 1.0);
-        p.v = damping_coeff * reflect(p.v, n);
-    }
-
-    if (p.r.x >= half_w_size) {
-        vec2 n = vec2(-1.0, 0);
-        p.v = damping_coeff * reflect(p.v, n);
-    }
-
-    if (p.r.x <= -half_w_size) {
-        vec2 n = vec2(1.0, 0);
-        p.v = damping_coeff * reflect(p.v, n);
+        p.v *= damping_coeff;
+        p.r.y = -half_h_size + eps;
+    } else if (p.r.x >= half_w_size) {
+        p.v *= damping_coeff;
+        p.r.x = half_w_size - eps;
+    } else if (p.r.x <= -half_w_size) {
+        p.v *= damping_coeff;
+        p.r.x = -half_w_size + eps;
     }
 
     current_particles[gid] = p;
