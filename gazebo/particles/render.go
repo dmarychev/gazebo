@@ -7,6 +7,10 @@ import "unsafe"
 //import "log"
 
 const (
+	WORKGROUP_SIZE = 16 // must match local_size_<> in compute shaders
+)
+
+const (
 	ATTRIB_COORDINATES = iota // index of coordinates attribute buffer
 )
 
@@ -70,7 +74,7 @@ func (rs *RenderState) Update() {
 	if rs.indexClear != nil {
 		disable := rs.indexClear.Enable()
 
-		gl.DispatchCompute(rs.countParticles/16, 1, 1)
+		gl.DispatchCompute(rs.countParticles/WORKGROUP_SIZE, 1, 1)
 		core.CheckError()
 
 		gl.MemoryBarrier(gl.SHADER_STORAGE_BARRIER_BIT)
@@ -86,7 +90,7 @@ func (rs *RenderState) Update() {
 	if rs.indexUpdate != nil {
 		disableUpdate := rs.indexUpdate.Enable()
 
-		gl.DispatchCompute(rs.countParticles/16, rs.countParticles/16, 1)
+		gl.DispatchCompute(rs.countParticles/WORKGROUP_SIZE, rs.countParticles/WORKGROUP_SIZE, 1)
 		core.CheckError()
 
 		gl.MemoryBarrier(gl.SHADER_STORAGE_BARRIER_BIT)
@@ -97,7 +101,7 @@ func (rs *RenderState) Update() {
 	for _, technique := range rs.updateTechniques {
 		disable := technique.Enable()
 
-		gl.DispatchCompute(rs.countParticles/16, 1, 1)
+		gl.DispatchCompute(rs.countParticles/WORKGROUP_SIZE, 1, 1)
 		core.CheckError()
 
 		gl.MemoryBarrier(gl.SHADER_STORAGE_BARRIER_BIT)

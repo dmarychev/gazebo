@@ -37,6 +37,72 @@ func initGlfw() *glfw.Window {
 	return window
 }
 
+// initialize simple SPH particles system
+func simpleSPHSystem() *particles.System {
+
+	smoothingRadius := float32(0.01)
+	maxNeighborParticles := uint32(40)
+	viscosity := float32(5.0)
+	gravity := float32(0.08)
+	//gravity := float32(0.0)
+	pressureCoefficient := float32(0.01)
+	modellingTimeStep := float32(0.01)
+
+	renderThis, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
+	if err != nil {
+		panic(err)
+	}
+
+	indexClear, err := particles.NewComputeTechniqueFromFile("sph/index_clear.cs")
+	if err != nil {
+		panic(err)
+	}
+
+	indexUpdate, err := particles.NewComputeTechniqueFromFile("sph/index_update.cs")
+	if err != nil {
+		panic(err)
+	}
+	indexUpdate.SetUniformFloat32("h", smoothingRadius)
+	indexUpdate.SetUniformUint("index_max_neighbors", maxNeighborParticles)
+
+	densityAndPressure, err := particles.NewComputeTechniqueFromFile("sph/density_and_pressure.cs")
+	if err != nil {
+		panic(err)
+	}
+	densityAndPressure.SetUniformFloat32("h", smoothingRadius)
+	densityAndPressure.SetUniformFloat32("k", pressureCoefficient)
+	densityAndPressure.SetUniformUint("index_max_neighbors", maxNeighborParticles)
+
+	accumulateForces, err := particles.NewComputeTechniqueFromFile("sph/accumulate_forces.cs")
+	if err != nil {
+		panic(err)
+	}
+	accumulateForces.SetUniformFloat32("h", smoothingRadius)
+	accumulateForces.SetUniformFloat32("mu", viscosity)
+	accumulateForces.SetUniformFloat32("g", gravity)
+	accumulateForces.SetUniformUint("index_max_neighbors", maxNeighborParticles)
+
+	leapfrog, err := particles.NewComputeTechniqueFromFile("sph/leapfrog_integration.cs")
+	if err != nil {
+		panic(err)
+	}
+	leapfrog.SetUniformFloat32("dt", modellingTimeStep)
+
+	reflectBoundaries, err := particles.NewComputeTechniqueFromFile("sph/reflect_boundaries.cs")
+	if err != nil {
+		panic(err)
+	}
+
+	ps := particles.NewSystem(renderThis, indexUpdate, indexClear, maxNeighborParticles)
+
+	ps.AddUpdateTechnique(densityAndPressure)
+	ps.AddUpdateTechnique(accumulateForces)
+	ps.AddUpdateTechnique(leapfrog)
+	ps.AddUpdateTechnique(reflectBoundaries)
+
+	return ps
+}
+
 func main() {
 	runtime.LockOSThread()
 
@@ -49,10 +115,21 @@ func main() {
 
 	particlesSet := make([]particles.Particle, 0, 4096)
 
-	for i := 0; i < 32; i++ {
-		for j := 0; j < 256; j++ {
+	for i := 0; i < 256; i++ {
+		for j := 0; j < 31; j++ {
 			particlesSet = append(particlesSet, particles.Particle{
-				R: core.Vec2{X: 0.01 * float32(i), Y: 0.01 * float32(j)},
+				R: core.Vec2{X: -0.8 + 0.01*float32(i), Y: -0.8 + 0.01*float32(j)},
+				//V: core.Vec2{Y: -2},
+				M: 0.01,
+			})
+		}
+	}
+
+	// drop
+	for i := 0; i < 16; i++ {
+		for j := 0; j < 16; j++ {
+			particlesSet = append(particlesSet, particles.Particle{
+				R: core.Vec2{X: 0.01 * float32(i), Y: 20.0 + 0.01*float32(j)},
 				//V: core.Vec2{Y: -2},
 				M: 0.01,
 			})
@@ -64,68 +141,36 @@ func main() {
 		particlesSet[i].R.Y += -0.0005 + 0.001*rand.Float32()
 	}
 
-	/*	for i := 0; i < cap(particlesSet); i++ {
-		rho := 0.5 + 0.5*rand.Float32()
-		phi := float32(math.Pi * (0.25 + 0.5*rand.Float32()))
-		particlesSet = append(particlesSet, particles.Particle{
-			R: core.Vec2{X: rho * float32(math.Cos(phi)), Y: rho * float32(math.Sin(phi))},
-			M: 0.1,
-		})
-	}*/
+	ps := simpleSPHSystem()
+	ps.SetParticles(particlesSet)
 
-	renderThis, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
-	if err != nil {
-		panic(err)
-	}
+	log.Printf("Press Enter to toggle simulation")
 
-	indexClear, err := particles.NewComputeTechniqueFromFile("sph/index_clear.cs")
-	if err != nil {
-		panic(err)
-	}
-
-	indexMaxNeighbors := uint32(40)
-
-	indexUpdate, err := particles.NewComputeTechniqueFromFile("sph/index_update.cs")
-	if err != nil {
-		panic(err)
-	}
-	indexUpdate.SetUniformUint("index_max_neighbors", indexMaxNeighbors)
-
-	ps := particles.NewSystem(particlesSet, 0.5, renderThis, indexUpdate, indexClear, indexMaxNeighbors)
-
-	// adding computation steps
-
-	if err = ps.AddUpdateTechniqueFromFile("sph/density_and_pressure.cs"); err != nil {
-		panic(err)
-	}
-
-	if err = ps.AddUpdateTechniqueFromFile("sph/accumulate_forces.cs"); err != nil {
-		panic(err)
-	}
-	leapfrog, err := particles.NewComputeTechniqueFromFile("sph/leapfrog_integration.cs")
-	if err != nil {
-		panic(err)
-	}
-	leapfrog.SetUniformFloat32("dt", 0.01)
-	log.Printf("dt=", leapfrog.GetUniformFloat32("dt"))
-	ps.AddUpdateTechnique(leapfrog)
-
-	if err = ps.AddUpdateTechniqueFromFile("sph/reflect_boundaries.cs"); err != nil {
-		panic(err)
-	}
-
-	// calculations
+	simulationOn := false
+	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		if key == glfw.KeyEnter && action == glfw.Press {
+			simulationOn = !simulationOn
+			if simulationOn {
+				log.Printf("Simulation Off")
+			} else {
+				log.Printf("Simulation On")
+			}
+		}
+	})
 
 	t0 := time.Now()
 	fps := 0
+	gl.ClearColor(0.8, 0.8, 0.8, 1.0)
 	for !window.ShouldClose() {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-		ps.Update()
+		if simulationOn {
+			ps.Update()
+		}
 		ps.Render()
 		fps++
 		window.SwapBuffers()
 		glfw.PollEvents()
-		if t1 := time.Now(); t1.Sub(t0) >= 1000000000 {
+		if t1 := time.Now(); t1.Sub(t0) >= 1E9 {
 			log.Printf("%v FPS", fps)
 			fps, t0 = 0, t1
 		}

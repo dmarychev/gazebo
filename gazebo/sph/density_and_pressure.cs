@@ -30,10 +30,6 @@ layout(std430, binding=1) buffer Index {
 
 uniform uint index_max_neighbors = 40;
 
-float W(float r, float h) {
-    return (315.0/(64.0 * PI * pow(h, 9))) * pow(pow(h, 2) - pow(r, 2), 3);
-}
-
 void main()
 {
     uint p_i = gl_GlobalInvocationID.x;
@@ -41,13 +37,22 @@ void main()
 
     uint index_base = p_i * index_max_neighbors;
 
+    const float k_poly6_coeff = 315.0/(64.0 * PI * pow(h, 9));
+    const float h2 = h * h;
+
     p.d = 0.0;
     for (uint i = 0; i < index_max_neighbors; i++) {
         uint neighbor_idx = index[index_base + i];
-        if (neighbor_idx != 0xdeadbeef) {
-            Particle o = current_particles[neighbor_idx];
-            p.d += o.m * W(length(p.r - o.r), h);
+        if (neighbor_idx == 0xdeadbeef) {
+            break;
         }
+        Particle o = current_particles[neighbor_idx];
+
+        vec2 dr = p.r - o.r;
+        float dr2 = dot(dr, dr);
+        float d_h2_dr2 = h2 - dr2;
+
+        p.d += o.m * k_poly6_coeff * d_h2_dr2 * d_h2_dr2 * d_h2_dr2;
     }
 
     p.p = k * p.d;

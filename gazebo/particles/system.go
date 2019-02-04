@@ -18,25 +18,20 @@ type Particle struct {
 }
 
 type System struct {
-	particles     []Particle   // particles
-	renderState   *RenderState // objects related to rendering
-	modellingStep float32      // increase for particle's time
+	renderState *RenderState // objects related to rendering
 }
 
-func NewSystem(particles []Particle, modellingStep float32, renderTechnique, indexUpdate, indexClear *core.Technique, indexMaxNeighbors uint32) *System {
+func NewSystem(renderTechnique, indexUpdate, indexClear *core.Technique, indexMaxNeighbors uint32) *System {
 
 	s := System{
-		modellingStep: modellingStep,
-		particles:     make([]Particle, len(particles)),
-		renderState:   NewRenderState(renderTechnique, indexUpdate, indexClear, indexMaxNeighbors),
+		renderState: NewRenderState(renderTechnique, indexUpdate, indexClear, indexMaxNeighbors),
 	}
 
-	// work with copy of particles for safety
-	copy(s.particles, particles)
-
-	s.renderState.SetParticles(s.particles)
-
 	return &s
+}
+
+func (s *System) SetParticles(particles []Particle) {
+	s.renderState.SetParticles(particles)
 }
 
 func (s *System) AddUpdateTechniqueFromFile(compShaderFile string) (err error) {
@@ -50,10 +45,6 @@ func (s *System) AddUpdateTechniqueFromFile(compShaderFile string) (err error) {
 
 func (s *System) AddUpdateTechnique(t *core.Technique) {
 	s.renderState.AddUpdateTechnique(t)
-}
-
-func (s *System) Size() uint32 {
-	return uint32(len(s.particles))
 }
 
 // shows current state on screen
