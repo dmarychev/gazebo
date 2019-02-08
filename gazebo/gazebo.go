@@ -3,7 +3,6 @@ package main
 import "log"
 import "time"
 
-//import "math"
 import "math/rand"
 import "runtime"
 import "github.com/go-gl/glfw/v3.2/glfw"
@@ -45,8 +44,9 @@ func simpleSPHSystem() *particles.System {
 	viscosity := float32(5.0)
 	gravity := float32(0.08)
 	//gravity := float32(0.0)
-	pressureCoefficient := float32(0.01)
+	pressureCoefficient := float32(0.015)
 	modellingTimeStep := float32(0.01)
+	damping := float32(-0.99)
 
 	renderThis, err := particles.NewRenderTechniqueFromFile("vfx/test.vs", "vfx/test.fs")
 	if err != nil {
@@ -92,6 +92,7 @@ func simpleSPHSystem() *particles.System {
 	if err != nil {
 		panic(err)
 	}
+	reflectBoundaries.SetUniformFloat32("damping_coeff", damping)
 
 	ps := particles.NewSystem(renderThis, indexUpdate, indexClear, maxNeighborParticles)
 
@@ -115,8 +116,8 @@ func main() {
 
 	particlesSet := make([]particles.Particle, 0, 4096)
 
-	for i := 0; i < 256; i++ {
-		for j := 0; j < 31; j++ {
+	for i := 0; i < 16; i++ {
+		for j := 0; j < 256; j++ {
 			particlesSet = append(particlesSet, particles.Particle{
 				R: core.Vec2{X: -0.8 + 0.01*float32(i), Y: -0.8 + 0.01*float32(j)},
 				//V: core.Vec2{Y: -2},
@@ -126,16 +127,16 @@ func main() {
 	}
 
 	// drop
-	for i := 0; i < 16; i++ {
-		for j := 0; j < 16; j++ {
-			particlesSet = append(particlesSet, particles.Particle{
-				R: core.Vec2{X: 0.01 * float32(i), Y: 20.0 + 0.01*float32(j)},
-				//V: core.Vec2{Y: -2},
-				M: 0.01,
-			})
+	/*	for i := 0; i < 16; i++ {
+			for j := 0; j < 16; j++ {
+				particlesSet = append(particlesSet, particles.Particle{
+					R: core.Vec2{X: 0.01 * float32(i), Y: 20.0 + 0.01*float32(j)},
+					//V: core.Vec2{Y: -2},
+					M: 0.01,
+				})
+			}
 		}
-	}
-
+	*/
 	for i := range particlesSet {
 		particlesSet[i].R.X += -0.0005 + 0.001*rand.Float32()
 		particlesSet[i].R.Y += -0.0005 + 0.001*rand.Float32()

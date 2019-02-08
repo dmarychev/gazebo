@@ -30,11 +30,10 @@ void main()
     uint gid = gl_GlobalInvocationID.x;
     Particle p = current_particles[gid];
 
-    /*if (p.r.y >= half_h_size) {
+/*    if (p.r.y >= half_h_size) {
         p.v *= damping_coeff;
         p.r.y = half_h_size - eps;
-    } else */
-    if (p.r.y <= -half_h_size) {
+    } else*/ if (p.r.y <= -half_h_size) {
         p.v *= damping_coeff;
         p.r.y = -half_h_size + eps;
     } else if (p.r.x >= half_w_size) {
